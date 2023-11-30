@@ -24,17 +24,7 @@ public static class HttpClientBuilderExtensions
     /// <returns>The builder.</returns>
     public static IHttpClientBuilder UseServiceDiscovery(this IHttpClientBuilder httpClientBuilder, IServiceEndPointSelectorProvider selectorProvider)
     {
-        var services = httpClientBuilder.Services;
-        services.AddServiceDiscoveryCore();
-        httpClientBuilder.AddHttpMessageHandler(services =>
-        {
-            var timeProvider = services.GetService<TimeProvider>() ?? TimeProvider.System;
-            var resolverProvider = services.GetRequiredService<ServiceEndPointResolverFactory>();
-            var registry = new HttpServiceEndPointResolver(resolverProvider, selectorProvider, timeProvider);
-            return new ResolvingHttpDelegatingHandler(registry);
-        });
-
-        return httpClientBuilder;
+        return httpClientBuilder.UseServiceDiscoveryInternal(selectorProvider);
     }
 
     /// <summary>
@@ -44,13 +34,24 @@ public static class HttpClientBuilderExtensions
     /// <returns>The builder.</returns>
     public static IHttpClientBuilder UseServiceDiscovery(this IHttpClientBuilder httpClientBuilder)
     {
+        return httpClientBuilder.UseServiceDiscoveryInternal(null);
+    }
+
+    /// <summary>
+    /// Adds service discovery to the <see cref="IHttpClientBuilder"/>.
+    /// </summary>
+    /// <param name="httpClientBuilder">The builder.</param>
+    /// <param name="selectorProvider">The provider that creates selector instances.</param>
+    /// <returns>The builder.</returns>
+    private static IHttpClientBuilder UseServiceDiscoveryInternal(this IHttpClientBuilder httpClientBuilder, IServiceEndPointSelectorProvider? selectorProvider)
+    {
         var services = httpClientBuilder.Services;
         services.AddServiceDiscoveryCore();
         httpClientBuilder.AddHttpMessageHandler(services =>
         {
             var timeProvider = services.GetService<TimeProvider>() ?? TimeProvider.System;
 
-            var selectorProvider = services.GetRequiredService<IServiceEndPointSelectorProvider>();
+            selectorProvider ??= services.GetRequiredService<IServiceEndPointSelectorProvider>();
             var resolverProvider = services.GetRequiredService<ServiceEndPointResolverFactory>();
             var registry = new HttpServiceEndPointResolver(resolverProvider, selectorProvider, timeProvider);
             return new ResolvingHttpDelegatingHandler(registry);
